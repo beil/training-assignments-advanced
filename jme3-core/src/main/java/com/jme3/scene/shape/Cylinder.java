@@ -32,6 +32,13 @@
 // $Id: Cylinder.java 4131 2009-03-19 20:15:28Z blaine.dev $
 package com.jme3.scene.shape;
 
+import static com.jme3.util.BufferUtils.createShortBuffer;
+import static com.jme3.util.BufferUtils.createVector2Buffer;
+import static com.jme3.util.BufferUtils.createVector3Buffer;
+
+import java.io.IOException;
+import java.nio.FloatBuffer;
+
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -42,9 +49,6 @@ import com.jme3.scene.Mesh;
 import com.jme3.scene.VertexBuffer.Type;
 import com.jme3.scene.mesh.IndexBuffer;
 import com.jme3.util.BufferUtils;
-import static com.jme3.util.BufferUtils.*;
-import java.io.IOException;
-import java.nio.FloatBuffer;
 
 /**
  * A simple cylinder, defined by it's height and radius.
@@ -69,87 +73,7 @@ public class Cylinder extends Mesh {
     /**
      * Default constructor for serialization only. Do not use.
      */
-    public Cylinder() {
-    }
-
-    /**
-     * Creates a new Cylinder. By default its center is the origin. Usually, a
-     * higher sample number creates a better looking cylinder, but at the cost
-     * of more vertex information.
-     *
-     * @param axisSamples
-     *            Number of triangle samples along the axis.
-     * @param radialSamples
-     *            Number of triangle samples along the radial.
-     * @param radius
-     *            The radius of the cylinder.
-     * @param height
-     *            The cylinder's height.
-     */
-    public Cylinder(int axisSamples, int radialSamples,
-            float radius, float height) {
-        this(axisSamples, radialSamples, radius, height, false);
-    }
-
-    /**
-     * Creates a new Cylinder. By default its center is the origin. Usually, a
-     * higher sample number creates a better looking cylinder, but at the cost
-     * of more vertex information. <br>
-     * If the cylinder is closed the texture is split into axisSamples parts:
-     * top most and bottom most part is used for top and bottom of the cylinder,
-     * rest of the texture for the cylinder wall. The middle of the top is
-     * mapped to texture coordinates (0.5, 1), bottom to (0.5, 0). Thus you need
-     * a suited distorted texture.
-     *
-     * @param axisSamples
-     *            Number of triangle samples along the axis.
-     * @param radialSamples
-     *            Number of triangle samples along the radial.
-     * @param radius
-     *            The radius of the cylinder.
-     * @param height
-     *            The cylinder's height.
-     * @param closed
-     *            true to create a cylinder with top and bottom surface
-     */
-    public Cylinder(int axisSamples, int radialSamples,
-            float radius, float height, boolean closed) {
-        this(axisSamples, radialSamples, radius, height, closed, false);
-    }
-
-    /**
-     * Creates a new Cylinder. By default its center is the origin. Usually, a
-     * higher sample number creates a better looking cylinder, but at the cost
-     * of more vertex information. <br>
-     * If the cylinder is closed the texture is split into axisSamples parts:
-     * top most and bottom most part is used for top and bottom of the cylinder,
-     * rest of the texture for the cylinder wall. The middle of the top is
-     * mapped to texture coordinates (0.5, 1), bottom to (0.5, 0). Thus you need
-     * a suited distorted texture.
-     *
-     * @param axisSamples
-     *            Number of triangle samples along the axis.
-     * @param radialSamples
-     *            Number of triangle samples along the radial.
-     * @param radius
-     *            The radius of the cylinder.
-     * @param height
-     *            The cylinder's height.
-     * @param closed
-     *            true to create a cylinder with top and bottom surface
-     * @param inverted
-     *            true to create a cylinder that is meant to be viewed from the
-     *            interior.
-     */
-    public Cylinder(int axisSamples, int radialSamples,
-            float radius, float height, boolean closed, boolean inverted) {
-        this(axisSamples, radialSamples, radius, radius, height, closed, inverted);
-    }
-
-    public Cylinder(int axisSamples, int radialSamples,
-            float radius, float radius2, float height, boolean closed, boolean inverted) {
-        super();
-        updateGeometry(axisSamples, radialSamples, radius, radius2, height, closed, inverted);
+    private Cylinder() {
     }
 
     /**
@@ -201,23 +125,8 @@ public class Cylinder extends Mesh {
     /**
      * Rebuilds the cylinder based on a new set of parameters.
      *
-     * @param axisSamples the number of samples along the axis.
-     * @param radialSamples the number of samples around the radial.
-     * @param radius the radius of the bottom of the cylinder.
-     * @param radius2 the radius of the top of the cylinder.
-     * @param height the cylinder's height.
-     * @param closed should the cylinder have top and bottom surfaces.
-     * @param inverted is the cylinder is meant to be viewed from the inside.
      */
-    public void updateGeometry(int axisSamples, int radialSamples,
-            float radius, float radius2, float height, boolean closed, boolean inverted) {
-        this.axisSamples = axisSamples;
-        this.radialSamples = radialSamples;
-        this.radius = radius;
-        this.radius2 = radius2;
-        this.height = height;
-        this.closed = closed;
-        this.inverted = inverted;
+    private void updateGeometry() {
 
 //        VertexBuffer pvb = getBuffer(Type.Position);
 //        VertexBuffer nvb = getBuffer(Type.Normal);
@@ -236,7 +145,7 @@ public class Cylinder extends Mesh {
         setBuffer(Type.TexCoord, 2, createVector2Buffer(vertCount));
 
         int triCount = ((closed ? 2 : 0) + 2 * (axisSamples - 1)) * radialSamples;
-        
+
         setBuffer(Type.Index, 3, createShortBuffer(getShortBuffer(Type.Index), 3 * triCount));
 
         // generate geometry
@@ -322,27 +231,28 @@ public class Cylinder extends Mesh {
                 }
 
                 if (topBottom == 0) {
-                    if (!inverted)
+                    if (!inverted) {
                         nb.put(vNormal.x).put(vNormal.y).put(vNormal.z);
-                    else
+                    } else {
                         nb.put(-vNormal.x).put(-vNormal.y).put(-vNormal.z);
+                    }
                 } else {
                     nb.put(0).put(0).put(topBottom * (inverted ? -1 : 1));
                 }
 
                 tempNormal.multLocal((radius - radius2) * axisFraction + radius2)
-                        .addLocal(sliceCenter);
+                          .addLocal(sliceCenter);
                 pb.put(tempNormal.x).put(tempNormal.y).put(tempNormal.z);
 
                 tb.put((inverted ? 1 - radialFraction : radialFraction))
-                        .put(axisFractionTexture);
+                  .put(axisFractionTexture);
             }
 
             BufferUtils.copyInternalVector3(pb, save, i);
             BufferUtils.copyInternalVector3(nb, save, i);
 
             tb.put((inverted ? 0.0f : 1.0f))
-                    .put(axisFractionTexture);
+              .put(axisFractionTexture);
         }
 
         if (closed) {
@@ -419,5 +329,67 @@ public class Cylinder extends Mesh {
         capsule.write(inverted, "inverted", false);
     }
 
+    public static class CylinderBuilder {
+        private int axisSamples;
+
+        private int radialSamples;
+
+        private float radius;
+        private float radius2;
+
+        private float height;
+        private boolean closed = false;
+        private boolean inverted = false;
+
+        public CylinderBuilder withAxisSamples(int axisSamples) {
+            this.axisSamples = axisSamples;
+            return this;
+        }
+
+        public CylinderBuilder withRadialSamples(int radialSamples) {
+            this.radialSamples = radialSamples;
+            return this;
+        }
+
+        public CylinderBuilder withRadius(float radius) {
+            this.radius = radius;
+            return this;
+        }
+
+        public CylinderBuilder withHeight(float height) {
+            this.height = height;
+            return this;
+        }
+
+        public CylinderBuilder withClosed(boolean closed) {
+            this.closed = closed;
+            return this;
+        }
+
+        public CylinderBuilder withInverted(boolean inverted) {
+            this.inverted = inverted;
+            return this;
+        }
+
+        public CylinderBuilder withRadius2(float radius2) {
+            this.radius2 = radius2;
+            return this;
+        }
+
+        public Cylinder build() {
+            Cylinder cylinder = new Cylinder();
+            cylinder.axisSamples = axisSamples;
+            cylinder.radialSamples = radialSamples;
+            cylinder.radius = radius;
+            cylinder.radius2 = radius2;
+            cylinder.height = height;
+            cylinder.closed = closed;
+            cylinder.inverted = inverted;
+
+            cylinder.updateGeometry();
+
+            return cylinder;
+        }
+    }
 
 }
